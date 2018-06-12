@@ -1,6 +1,6 @@
 
 from math import radians, atan, tan, sin, cos, acos
-
+#计算距离和相似度
 #radians 角度转弧度
 ra = 6378.140  # 赤道半径 (km)
 rb = 6356.755  # 极半径 (km)

@@ -1,18 +1,14 @@
-import pickle
-import os, sys, time
 import platform
-import threading
 import pandas as pd
-#from draw import *
-
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import *
 from PyQt5.QtWebEngineWidgets import QWebEngineView
-from PyQt5.QtGui import QIcon, QIntValidator
+from PyQt5.QtGui import QIcon, QIntValidator, QFont, QBrush
 from PyQt5.QtCore import Qt, QUrl
-from draw_top_k import drawTopkMap ,drawRangeMap
+from draw_top_k import drawTopkMap, drawRangeMap
+from find import findTopK,findTopKWithKeyWord,findRange
+from table import MyTable
 
-import xlrd
 from math import *
 import plotly.plotly as py
 from plotly.graph_objs import *
@@ -35,9 +31,10 @@ class UI(QMainWindow):
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
                 "back1.jpg")
 
-
         self.setWindowTitle('Starbucks数据分析')
         self.setWindowIcon(QIcon('back1.jpg'))
+
+
 
         self.mainWidget = QWidget()  # 主窗体控件
         self.mainLayout = QGridLayout()  # 主窗体layout
@@ -56,13 +53,13 @@ class UI(QMainWindow):
         self.adjustSize()
         self.center()  # 将窗口居中
         self.show()
-
+        self.file = pd.read_csv('directory00.csv')
 
     def setWebEngineView(self):
         self.webEngine = QWebEngineView(self)
 
-
         # 设置菜单上的按钮
+
     def setMenu(self):
         menuBar = self.menuBar()
         menuBar.setNativeMenuBar(False)
@@ -97,6 +94,24 @@ class UI(QMainWindow):
         buttonMenu.addAction(action6)
         action6.triggered.connect(self.drawTimezonePie)
 
+        buttonMenu = menuBar.addMenu('查找top-k')
+
+        action7 = QAction('top-k图', self)
+        buttonMenu.addAction(action7)
+        action7.triggered.connect(self.findTopkTu)
+        action9 = QAction('top-k查找表格', self)
+        buttonMenu.addAction(action9)
+        action9.triggered.connect(self.setExcelTopk)
+
+        buttonMenu = menuBar.addMenu('查找range')
+
+        action8 = QAction('range图', self)
+        buttonMenu.addAction(action8)
+        action8.triggered.connect(self.findRangeTu)
+        action10 = QAction('range查找表格', self)
+        buttonMenu.addAction(action10)
+        action10.triggered.connect(self.setExcelRange)
+
     def setFindTopKWidget(self):
         longitudeLabel = QLabel()
         latitudeLabel = QLabel()
@@ -116,14 +131,6 @@ class UI(QMainWindow):
         self.rangeEdit = QLineEdit()
         self.keywordEdit = QLineEdit()
 
-        self.findTopKButton = QPushButton()
-        self.findTopKButton.setText("查找top-k")
-        self.findRangeButton = QPushButton()
-        self.findRangeButton.setText("range查找")
-
-        self.findTopKButton.clicked.connect(self.findTopk)
-        self.findRangeButton.clicked.connect(self.findRange)
-
         hBox = QHBoxLayout(self)
         hBox.addWidget(longitudeLabel)
         hBox.addWidget(self.longitudeEdit, 0)
@@ -135,11 +142,41 @@ class UI(QMainWindow):
         hBox.addWidget(self.rangeEdit, 0)
         hBox.addWidget(keywordLabel)
         hBox.addWidget(self.keywordEdit, 0)
-        hBox.addWidget(self.findTopKButton, 0)
-        hBox.addWidget(self.findRangeButton, 0)
+        # hBox.addWidget(self.findTopKButton, 0)
+        # hBox.addWidget(self.findRangeButton, 0)
         hWidget = QWidget()
         hWidget.setLayout(hBox)
         self.mainLayout.addWidget(hWidget, 1, 1, 1, 6)
+
+    def setExcelTopk(self):
+        if not self.check():
+            return
+        k = self.kEdit.text()
+        keyword = self.keywordEdit.text()
+
+        k = int(k)
+        csv_file = self.file.fillna("").astype(str)
+        self.data = [" ".join(list(csv_file.iloc[x])) for x in range(len(csv_file))]
+        if keyword == '':
+            topKInfo = findTopK(self.file, self.longitude, self.latitude, k)
+        else:
+            topKInfo = findTopKWithKeyWord(self.file,self.longitude,self.latitude,k,keyword,self.data)
+
+        self.table = MyTable(topKInfo, self.file)
+        # self.table.show()
+
+    def setExcelRange(self):
+        if not self.check():
+            return
+
+        r = self.rangeEdit.text()
+
+        if r == "":
+            QMessageBox.warning(self, "警告", "请输入range值", QMessageBox.Ok)
+            return
+        r = int(r)
+        rangeInfo = findRange(self.file, self.longitude, self.latitude, r)
+        self.table = MyTable(rangeInfo, self.file)
 
     def check(self):
         self.longitude = self.longitudeEdit.text()
@@ -172,14 +209,13 @@ class UI(QMainWindow):
             return False
         return True
 
-    def findTopk(self):
+    def findTopkTu(self):
         if not self.check():
             return
         k = self.kEdit.text()
         keyword = self.keywordEdit.text()
 
         k = int(k)
-        self.file = pd.read_csv('directory.csv')
         csv_file = self.file.fillna("").astype(str)
         self.data = [" ".join(list(csv_file.iloc[x])) for x in range(len(csv_file))]
         # import pickle
@@ -193,12 +229,12 @@ class UI(QMainWindow):
                                   k,
                                   keyword,
                                   self.data,
-                                  'html/topk1.html','top图')
+                                  'html/topk1.html', 'top图')
                             )
-        self.t.endTrigger.connect(lambda:self.showInWebEngineView('/html/topk1.html'))
+        self.t.endTrigger.connect(lambda: self.showInWebEngineView('/html/topk1.html'))
         self.t.start()
 
-    def findRange(self):
+    def findRangeTu(self):
         if not self.check():
             return
 
@@ -209,7 +245,6 @@ class UI(QMainWindow):
             return
 
         r = int(r)
-        self.file = pd.read_csv('directory.csv')
         self.showInWebEngineView('/html/index.html')
         self.t = DrawThread(target=drawRangeMap,
                             args=(self.file,
@@ -219,27 +254,35 @@ class UI(QMainWindow):
                                   'html/RangeMap.html', '距离range图'))
         self.t.endTrigger.connect(lambda: self.showInWebEngineView('/html/RangeMap.html'))
         self.t.start()
-    # 加载html
+
     def showInWebEngineView(self, fileName):
         self.webEngine.load(QUrl.fromLocalFile(fileName))
 
     def drawMap(self):
         self.showInWebEngineView('/html/temp-plot.html')
+
     def drawColorMaps(self):
         self.showInWebEngineView('/html/guojiashulaing.html')
+
     def drawLongitudeMap(self):
         self.showInWebEngineView('/html/时区散点图.html')
+
     def drawTimezonecolor(self):
         self.showInWebEngineView('/html/timezone.html')
+
     def drawTimezoneBar(self):
         self.showInWebEngineView('/html/bar-timezone.html')
+
     def drawTimezonePie(self):
         self.showInWebEngineView('/html/timezone_pie_chart.html')
+
     def drawCountryBar(self):
         self.showInWebEngineView('/html/bar-country.html')
+
     def drawCountryPie(self):
         self.showInWebEngineView('/html/country_pie_chart.html')
-# 窗口居中
+
+    # 窗口居中
     def center(self):
         self.resize(900, 600)
         desktop = QtWidgets.QApplication.desktop()
@@ -249,12 +292,10 @@ class UI(QMainWindow):
         self.show()
 
 
-
-
 if __name__ == "__main__":
-    app = QApplication(sys.argv)# 创建一个应用对象 ,sys.argv 是提供对脚本控制功能的参数
-    #实例化对象
+    app = QApplication(sys.argv)  # 创建一个应用对象 ,sys.argv 是提供对脚本控制功能的参数
+    # 实例化对象
     ex = UI()
-    #结束应用的主循环，主循环是从窗口系统中接受时间并快速的法网应用窗口，调用exit()方法或者主窗口关闭时，主循环结束
-    #sys.exec_()方法是确保关闭干净
+    # 结束应用的主循环，主循环是从窗口系统中接受时间并快速的法网应用窗口，调用exit()方法或者主窗口关闭时，主循环结束
+    # sys.exec_()方法是确保关闭干净
     sys.exit(app.exec_())

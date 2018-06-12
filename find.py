@@ -1,5 +1,5 @@
+#三个查询函数
 from calculate import calcDistance,calcRelativity,calcReverseDistance
-import heapq
 def findTopK(file, longitude, latitude, topK):
     file['Distance'] = file.apply(
         lambda x:calcDistance(longitude, latitude, x.Longitude, x.Latitude),

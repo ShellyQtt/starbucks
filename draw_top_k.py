@@ -1,11 +1,8 @@
+#查询结果绘图
 from find import findTopK ,findRange,findTopKWithKeyWord
-import os
-import pickle
-import pandas as pd
-from random import randint
 import plotly.offline as py
 from plotly.graph_objs import *
-from PyQt5.QtCore import QUrl
+
 
 mapbox_access_token = 'pk.eyJ1IjoibHNoaXl1ZSIsImEiOiJjamYyZW5raWYwbWF5MnpxN3Fva3Jxc2xmIn0.RdUrTcrSiCMA84-suzPgJg'
 
@@ -20,21 +17,33 @@ def drawTopkMap(file, lon, lat, topk, keyWord, data, fileName = "topk1.html", ti
                        + "Store Name: " + topKInfo["Store Name"] + "</br>" \
                        + "Street Address: " + topKInfo["Street Address"] + "</br>" \
                        + "Postcode: " + topKInfo["Postcode"] + "</br>" \
-                       + "Phone Number: " + topKInfo["Phone Number"] + "</br>"
+                       + "Phone Number: " + topKInfo["Phone Number"] + "</br>"\
+                       + "Score: " + topKInfo["Score"].map(intToString) + "</br>"\
+                       + "Time: " + topKInfo['Time'].map(intToString) + "</br>"
 
-
+    normal = topKInfo[topKInfo['Score'] < 8]
+    special = topKInfo[topKInfo['Score'] >= 8]
     data = []
     data.append(Scattermapbox(
-        lat=topKInfo['Latitude'],
-        lon=topKInfo['Longitude'],
+        lat=normal['Latitude'],
+        lon=normal['Longitude'],
         mode='markers',
         marker=Marker(size=10, color='green'),
-        text=topKInfo['info'],
+        text=normal['info'],
         textposition='top left',
         hoverinfo='text',
         name="topK点",
     ))
-
+    data.append(Scattermapbox(
+        lat=special['Latitude'],
+        lon=special['Longitude'],
+        mode='markers',
+        marker=Marker(size=10, color='blue'),
+        text=special['info'],
+        textposition='top left',
+        hoverinfo='text',
+        name="topK评分高于8的点",
+    ))
     data.append(Scattermapbox(
         lat=[lat],
         lon=[lon],
@@ -59,6 +68,9 @@ def drawTopkMap(file, lon, lat, topk, keyWord, data, fileName = "topk1.html", ti
     fig = dict(data=data, layout=layout)
     py.plot(fig, filename=fileName, auto_open=False)
 
+def intToString(number):
+    return str(number)
+
 def drawRangeMap(file, lon, lat, range, fileName="rangeMap.html", title='Range'):
     rangeInfo = findRange(file, lon, lat, range)
 
@@ -72,17 +84,32 @@ def drawRangeMap(file, lon, lat, range, fileName="rangeMap.html", title='Range')
                         + "Street Address: " + rangeInfo["Street Address"] + "</br>" \
                         + "Postcode: " + rangeInfo["Postcode"] + "</br>" \
                         + "Phone Number: " + rangeInfo["Phone Number"] + "</br>" \
-                        + "Distance: " + rangeInfo["Distance"] + "</br>"
+                        + "Distance: " + rangeInfo["Distance"] + "</br>"\
+                        + "Score: " + rangeInfo["Score"].map(intToString) + "</br>" \
+                        + "Time: " + rangeInfo['Time'].map(intToString) + "</br>" \
+
+    normal = rangeInfo[rangeInfo['Score'] < 8]
+    special = rangeInfo[rangeInfo['Score'] >= 8]
     data = []
     data.append(Scattermapbox(
-        lat=rangeInfo['Latitude'],
-        lon=rangeInfo['Longitude'],
+        lat=normal['Latitude'],
+        lon=normal['Longitude'],
         mode='markers',
         marker=Marker(size=10, color='green'),
-        text=rangeInfo['info'],
+        text=normal['info'],
         textposition='top left',
         hoverinfo='text',
         name="距离标记点 < range的点",
+    ))
+    data.append(Scattermapbox(
+        lat=special['Latitude'],
+        lon=special['Longitude'],
+        mode='markers',
+        marker=Marker(size=10, color='blue'),
+        text=special['info'],
+        textposition='top left',
+        hoverinfo='text',
+        name="range查询评分高于8的点",
     ))
 
     data.append(Scattermapbox(
